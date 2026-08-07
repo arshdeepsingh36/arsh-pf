@@ -1,0 +1,54 @@
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-text antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Custom scrollbar to match the clean aesthetic */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+/* Avatar Reveal Animation */
+.avatar-reveal-mask {
+  mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 60%);
+  mask-size: 100% 300%;
+  mask-position: 0 100%;
+  animation: avatar-sweep 2s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 60%);
+  -webkit-mask-size: 100% 300%;
+  -webkit-mask-position: 0 100%;
+}
+
+@keyframes avatar-sweep {
+  0% {
+    mask-position: 0 100%;
+    -webkit-mask-position: 0 100%;
+  }
+  100% {
+    mask-position: 0 0%;
+    -webkit-mask-position: 0 0%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar-reveal-mask {
+    animation: none;
+    mask-position: 0 0%;
+    -webkit-mask-position: 0 0%;
+  }
+}
