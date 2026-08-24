@@ -1,0 +1,278 @@
+{
+  "projects": [
+    {
+      "id": "1",
+      "title": "Rivermark",
+      "subtitle": "A comprehensive brand identity and website design for a high-growth fintech startup.",
+      "type": "Website, Social Media",
+      "img": "https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=1000&auto=format&fit=crop",
+      "role": "Lead Product Designer",
+      "client": "Rivermark Financial",
+      "year": "2026",
+      "deliverables": [
+        "UI/UX Design",
+        "Brand Identity",
+        "Web Development",
+        "Design System"
+      ],
+      "websiteUrl": "https://example.com",
+      "challenge": "Rivermark required a complete brand refresh and digital platform to stand out in the crowded fintech market. The primary challenge was translating complex financial analytics into an intuitive, accessible user interface while maintaining high trust and credibility.",
+      "processImg1": "https://images.unsplash.com/photo-1542744094-3a31f272c490?q=80&w=2070&auto=format&fit=crop",
+      "solution": "We developed an ultra-clean visual identity paired with high-contrast typography, interactive financial visualizations, and a responsive modular component system. Micro-interactions and subtle haptics were integrated to provide immediate user feedback.",
+      "processImg2": "https://images.unsplash.com/photo-1616469829581-73993eb86b02?q=80&w=2070&auto=format&fit=crop",
+      "processImg3": "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?q=80&w=2070&auto=format&fit=crop",
+      "impact": "Post-launch, user sign-ups increased by 140% within the first quarter, while user onboarding drop-off rates fell by 35%."
+    },
+    {
+      "id": "2",
+      "title": "Fluxa",
+      "subtitle": "Designing the next-generation workflow orchestration platform for creative teams.",
+      "type": "UX/UI, Growth",
+      "img": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1000&auto=format&fit=crop",
+      "role": "Senior UI/UX Designer",
+      "client": "Fluxa Labs",
+      "year": "2025",
+      "deliverables": [
+        "Web App Design",
+        "Prototyping",
+        "User Research",
+        "Design System"
+      ],
+      "websiteUrl": "https://example.com",
+      "challenge": "Creative teams often suffer from tool fragmentation. Fluxa sought to combine project boards, asset management, and live feedback into one unified canvas without overwhelming users.",
+      "processImg1": "https://images.unsplash.com/photo-1531403009284-440f080d1e12?q=80&w=2070&auto=format&fit=crop",
+      "solution": "We introduced an infinite-canvas workspace with contextual toolbars that only appear when relevant, reducing screen clutter by 60% and speeding up navigation.",
+      "processImg2": "https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?q=80&w=2070&auto=format&fit=crop",
+      "processImg3": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2070&auto=format&fit=crop",
+      "impact": "Over 50,000 active users onboarded in the first 6 months, receiving the Product of the Day award on Product Hunt."
+    },
+    {
+      "id": "3",
+      "title": "River",
+      "subtitle": "Streamlining high-velocity e-commerce and marketing experiences.",
+      "type": "Website, Growth",
+      "img": "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?q=80&w=1000&auto=format&fit=crop",
+      "role": "Creative Director & Designer",
+      "client": "River Apparel",
+      "year": "2025",
+      "deliverables": [
+        "E-Commerce UI",
+        "Art Direction",
+        "Motion Design"
+      ],
+      "websiteUrl": "https://example.com",
+      "challenge": "River needed an editorial e-commerce platform that felt like a luxury magazine while maintaining sub-second page loads and seamless mobile checkout.",
+      "processImg1": "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop",
+      "solution": "Engineered a fluid typography system, seamless product lookbooks, and an instant checkout slide-over drawer.",
+      "processImg2": "https://images.unsplash.com/photo-1472851294608-062f824d29cc?q=80&w=2070&auto=format&fit=crop",
+      "processImg3": "https://images.unsplash.com/photo-1522204523234-8729aa6e3d5f?q=80&w=2070&auto=format&fit=crop",
+      "impact": "Conversion rates increased by 42% on mobile devices with an average order value increase of 18%."
+    },
+    {
+      "id": "4",
+      "title": "Season",
+      "subtitle": "A mindful wellness and seasonal nutrition mobile application.",
+      "type": "Website, UX/UI",
+      "img": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1000&auto=format&fit=crop",
+      "role": "Mobile UI Designer",
+      "client": "Season Health",
+      "year": "2025",
+      "deliverables": [
+        "Mobile App (iOS/Android)",
+        "Design Tokens",
+        "Illustrations"
+      ],
+      "websiteUrl": "https://example.com",
+      "challenge": "Designing a habit-tracking app that inspires calm rather than anxiety and notification overload.",
+      "processImg1": "https://images.unsplash.com/photo-1506126613408-eca07ce68773?q=80&w=2070&auto=format&fit=crop",
+      "solution": "Used organic color palettes, seasonal gradient shifts according to local weather, and gentle haptic reminders.",
+      "processImg2": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=2070&auto=format&fit=crop",
+      "processImg3": "https://images.unsplash.com/photo-1518611012118-696072aa579a?q=80&w=2070&auto=format&fit=crop",
+      "impact": "Featured on Apple App Store \"Apps We Love\" with a 4.9-star rating across 12,000+ reviews."
+    },
+    {
+      "id": "5",
+      "title": "Nexus",
+      "subtitle": "Cloud infrastructure dashboard for developers and DevOps architects.",
+      "type": "App Design, UX/UI",
+      "img": "https://images.unsplash.com/photo-1542744094-24638eff58bb?q=80&w=1000&auto=format&fit=crop",
+      "role": "Lead UX Architect",
+      "client": "Nexus Cloud",
+      "year": "2024",
+      "deliverables": [
+        "Design System",
+        "Data Visualization",
+        "Complex Workflows"
+      ],
+      "websiteUrl": "https://example.com",
+      "challenge": "Displaying thousands of server nodes and network topologies in real-time without visual stutter or cognitive overload.",
+      "processImg1": "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?q=80&w=2070&auto=format&fit=crop",
+      "solution": "Created hierarchical cluster visualization and customizable telemetry widget dashboards.",
+      "processImg2": "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=2070&auto=format&fit=crop",
+      "processImg3": "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=2070&auto=format&fit=crop",
+      "impact": "Reduced incident resolution time by 28% for enterprise engineering teams."
+    },
+    {
+      "id": "6",
+      "title": "Oasis",
+      "subtitle": "Sustainable architectural studio portfolio and client inquiry portal.",
+      "type": "Website, Branding",
+      "img": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1000&auto=format&fit=crop",
+      "role": "Art Director",
+      "client": "Oasis Architecture",
+      "year": "2024",
+      "deliverables": [
+        "Brand Identity",
+        "Custom Web Experience",
+        "3D Architectural Renders"
+      ],
+      "websiteUrl": "https://example.com",
+      "challenge": "Showcasing monumental architecture projects through digital storytelling that respects scale and material texture.",
+      "processImg1": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=2070&auto=format&fit=crop",
+      "solution": "Implemented smooth WebGL transitions, high-fidelity gallery viewports, and interactive blueprint overlays.",
+      "processImg2": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=2070&auto=format&fit=crop",
+      "processImg3": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?q=80&w=2070&auto=format&fit=crop",
+      "impact": "Won Awwwards Site of the Day and generated $4M+ in architecture commission pipeline."
+    }
+  ],
+  "articles": [
+    {
+      "id": "1",
+      "slug": "the-future-of-web-design-in-2026",
+      "title": "The Future of Web Design in 2026",
+      "date": "Aug 12, 2026",
+      "tag": "Design",
+      "author": "Arshdeep S.",
+      "authorRole": "Creative Designer",
+      "authorAvatar": "/avatar1.png",
+      "img": "https://images.unsplash.com/photo-1558655146-d09347e92766?q=80&w=1000&auto=format&fit=crop",
+      "lead": "Design is constantly evolving. In 2026, the intersection of AI, spatial computing, and minimalist aesthetics is creating entirely new paradigms for digital experiences.",
+      "section1Title": "The Rise of Invisible Interfaces",
+      "section1Content": "We are moving past the era of heavy UI components. Users now expect interfaces that anticipate their needs without demanding attention. This means less chrome, more content, and interactions that feel like magic. Natural language prompts and contextual gestures are replacing multi-step dropdown forms.",
+      "quote": "Good design is obvious. Great design is transparent.",
+      "section2Title": "Embracing AI-Driven Personalization",
+      "section2Content": "Interfaces are becoming polymorphic—they adapt color themes, typography density, and navigation structures according to individual user context, device environment, and intent.",
+      "keyTakeaways": [
+        "Minimalism is here to stay, but it is getting warmer and more tactile.",
+        "Micro-interactions bridge the gap between human and machine.",
+        "Performance is no longer a technical metric, it is a design feature."
+      ],
+      "conclusion": "As creators, our responsibility is to balance technological power with human empathy, designing systems that empower without overwhelming."
+    },
+    {
+      "id": "2",
+      "slug": "mastering-framer-motion-for-react",
+      "title": "Mastering Framer Motion for React",
+      "date": "Jul 28, 2026",
+      "tag": "Development",
+      "author": "Arshdeep S.",
+      "authorRole": "Creative Designer",
+      "authorAvatar": "/avatar1.png",
+      "img": "https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=1000&auto=format&fit=crop",
+      "lead": "Animations should never feel like an afterthought. When used intentionally, motion provides crucial spatial context and delightful moments of feedback.",
+      "section1Title": "Physics Over Fixed Timings",
+      "section1Content": "Spring physics produce animations that feel organic and responsive. Unlike fixed duration cubic-beziers, springs adapt seamlessly if interrupted by user interaction.",
+      "quote": "Motion communicates hierarchy and vitality before a user even reads the text.",
+      "section2Title": "Layout Animations & Shared Elements",
+      "section2Content": "With layoutId and AnimatePresence, creating smooth transitions between tabs, cards, and modal expansions requires only a few lines of declarative code.",
+      "keyTakeaways": [
+        "Prioritize springs over linear keyframes.",
+        "Respect prefers-reduced-motion for accessibility.",
+        "Animate only transform and opacity properties for 60fps performance."
+      ],
+      "conclusion": "Deliberate motion turns a standard static website into a tactile, memorable experience."
+    },
+    {
+      "id": "3",
+      "slug": "why-typography-matters-in-ui",
+      "title": "Why Typography Matters in UI",
+      "date": "Jul 05, 2026",
+      "tag": "Typography",
+      "author": "Arshdeep S.",
+      "authorRole": "Creative Designer",
+      "authorAvatar": "/avatar1.png",
+      "img": "https://images.unsplash.com/photo-1561070791-2526d30994b5?q=80&w=1000&auto=format&fit=crop",
+      "lead": "Typography accounts for more than 90% of information on the web. Mastering typographic scales and pairings is the fastest way to elevate UI quality.",
+      "section1Title": "Contrast and Visual Hierarchy",
+      "section1Content": "Pairing a distinctive serif like Fraunces for display headings with a clean geometric sans like Inter delivers both character and effortless readability.",
+      "quote": "Typography is the craft of endowing human language with a durable visual form.",
+      "section2Title": "Fluid Type Scales and Line Lengths",
+      "section2Content": "Keeping line lengths between 45 and 75 characters per line (optimal reading measure) significantly reduces cognitive strain and reader fatigue.",
+      "keyTakeaways": [
+        "Limit typefaces to two harmonious families.",
+        "Establish a strict modular scale for consistency.",
+        "Pay close attention to letter-spacing on uppercase headings."
+      ],
+      "conclusion": "Great typography does not just look beautiful—it guides the eye and tells a story."
+    },
+    {
+      "id": "4",
+      "slug": "building-scalable-design-systems",
+      "title": "Building Scalable Design Systems",
+      "date": "Jun 20, 2026",
+      "tag": "Design",
+      "author": "Arshdeep S.",
+      "authorRole": "Creative Designer",
+      "authorAvatar": "/avatar1.png",
+      "img": "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?q=80&w=1000&auto=format&fit=crop",
+      "lead": "A design system is not just a UI library; it is a shared language that bridges engineering, product, and design.",
+      "section1Title": "Design Tokens as Single Source of Truth",
+      "section1Content": "By structuring design tokens hierarchically (global, semantic, component-level), entire redesigns or theme switches become instantaneous.",
+      "quote": "Systems provide consistency so designers can focus on solving real problems.",
+      "section2Title": "Component Governance & Documentation",
+      "section2Content": "Without clear contribution workflows and documentation, systems quickly devolve into chaos. Governance ensures sustainability.",
+      "keyTakeaways": [
+        "Start small with core primitives before building complex widgets.",
+        "Document not just the \"how\" but the \"why\".",
+        "Automate linting and token synchronization between Figma and code."
+      ],
+      "conclusion": "The best design system is the one your team actually loves using every day."
+    },
+    {
+      "id": "5",
+      "slug": "the-psychology-of-color-in-branding",
+      "title": "The Psychology of Color in Branding",
+      "date": "Jun 10, 2026",
+      "tag": "Branding",
+      "author": "Arshdeep S.",
+      "authorRole": "Creative Designer",
+      "authorAvatar": "/avatar1.png",
+      "img": "https://images.unsplash.com/photo-1525909002-1b05e0c869d8?q=80&w=1000&auto=format&fit=crop",
+      "lead": "Colors evoke visceral emotional reactions. Choosing brand palettes requires understanding cultural context, accessibility, and visual harmony.",
+      "section1Title": "Emotional Resonance of Palettes",
+      "section1Content": "Deep violets and purples convey luxury, innovation, and wisdom, while warm off-whites create an inviting, editorial aesthetic.",
+      "quote": "Color is a power which directly influences the soul.",
+      "section2Title": "Designing for Contrast and WCAG Compliance",
+      "section2Content": "Aesthetics should never compromise legibility. Ensuring at least 4.5:1 contrast ratio guarantees your brand is accessible to everyone.",
+      "keyTakeaways": [
+        "Use the 60-30-10 color rule for balanced visual weight.",
+        "Test palettes across varied display calibrations and lighting.",
+        "Accent colors should be reserved for primary actions."
+      ],
+      "conclusion": "A disciplined color palette creates instant recognition and lasting brand trust."
+    },
+    {
+      "id": "6",
+      "slug": "optimizing-react-performance",
+      "title": "Optimizing React Performance",
+      "date": "May 22, 2026",
+      "tag": "Development",
+      "author": "Arshdeep S.",
+      "authorRole": "Creative Designer",
+      "authorAvatar": "/avatar1.png",
+      "img": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?q=80&w=1000&auto=format&fit=crop",
+      "lead": "Silky smooth 60fps applications do not happen by accident. Here are essential architectural patterns for React performance.",
+      "section1Title": "Eliminating Unnecessary Re-renders",
+      "section1Content": "State colocation and memoization of expensive subtrees prevent cascade re-renders during frequent user inputs.",
+      "quote": "Premature optimization is wasteful, but architectural awareness is essential.",
+      "section2Title": "Asset Optimization and Code Splitting",
+      "section2Content": "Dynamic imports with React.lazy and optimized modern image formats (AVIF/WebP) slash initial bundle sizes and Time to Interactive.",
+      "keyTakeaways": [
+        "Colocate state as close to leaves as possible.",
+        "Monitor bundle sizes with Vite analyzer tools.",
+        "Offload heavy computations using web workers or deferred transitions."
+      ],
+      "conclusion": "Speed is user delight. Treat performance as an essential pillar of your design craft."
+    }
+  ]
+}

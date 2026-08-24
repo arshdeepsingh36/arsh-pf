@@ -1,7 +1,14 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 const Contact = () => {
+  const navigate = useNavigate();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    navigate('/success');
+  };
   return (
     <section id="contact" className="py-16 md:py-20 bg-gray-900 text-white relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-6 md:px-12">
@@ -45,7 +52,7 @@ const Contact = () => {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="flex flex-col justify-center"
           >
-            <form className="flex flex-col gap-10">
+            <form className="flex flex-col gap-10" onSubmit={handleSubmit}>
               <div className="flex flex-col">
                 <label className="text-xs font-sans text-gray-400 uppercase tracking-widest mb-2" htmlFor="name">What's your name?</label>
                 <input 

@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/dev.js",
+    "server": "node server/index.js",
+    "client": "vite",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview"
@@ -14,6 +16,8 @@
     "@tailwindcss/vite": "^4.3.3",
     "autoprefixer": "^10.5.4",
     "clsx": "^2.1.1",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
     "framer-motion": "^12.43.0",
     "lucide-react": "^1.28.0",
     "postcss": "^8.5.25",
