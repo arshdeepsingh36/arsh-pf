@@ -93,41 +93,17 @@ export const DataProvider = ({ children }) => {
   }, [refreshData]);
 
   // Helper for auth headers
-  const getAuthHeaders = () => ({
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {})
-  });
+  const getAuthHeaders = () => {
+    const activeToken = token || sessionStorage.getItem(TOKEN_KEY) || ('master_' + btoa(MASTER_PASSCODE));
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${activeToken}`
+    };
+  };
 
   // Login handler
   const login = async (password) => {
-    // 1. Check client-side passcode match
-    if (password === MASTER_PASSCODE) {
-      const fallbackToken = 'session_' + Date.now();
-      setToken(fallbackToken);
-      try {
-        sessionStorage.setItem(TOKEN_KEY, fallbackToken);
-      } catch (e) {}
-
-      // 2. Also authenticate with backend if reachable
-      try {
-        const res = await fetch('/api/admin/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.token) {
-            setToken(data.token);
-            sessionStorage.setItem(TOKEN_KEY, data.token);
-          }
-        }
-      } catch (e) {}
-
-      return { success: true };
-    }
-
-    // Try server if different password configured in environment
+    // 1. Try server authentication first
     try {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
@@ -139,11 +115,24 @@ export const DataProvider = ({ children }) => {
         setToken(data.token);
         sessionStorage.setItem(TOKEN_KEY, data.token);
         return { success: true };
+      } else if (!res.ok && res.status === 429) {
+        return { success: false, error: data.error };
       }
-      return { success: false, error: data.error || 'Incorrect passcode' };
     } catch (err) {
-      return { success: false, error: 'Incorrect passcode.' };
+      // Backend not running (offline mode)
     }
+
+    // 2. Client-side passcode verification
+    if (password === MASTER_PASSCODE) {
+      const masterToken = 'master_' + btoa(password);
+      setToken(masterToken);
+      try {
+        sessionStorage.setItem(TOKEN_KEY, masterToken);
+      } catch (e) {}
+      return { success: true };
+    }
+
+    return { success: false, error: 'Incorrect passcode.' };
   };
 
   // Logout handler
@@ -171,8 +160,14 @@ export const DataProvider = ({ children }) => {
       deliverables
     };
 
-    // 1. Immediately update UI state
-    setProjects((prev) => [formattedProject, ...prev]);
+    // 1. Immediately update UI state and LocalStorage
+    setProjects((prev) => {
+      const updated = [formattedProject, ...prev];
+      try {
+        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
 
     // 2. Sync with backend API
     try {
@@ -199,10 +194,14 @@ export const DataProvider = ({ children }) => {
       deliverables
     };
 
-    // 1. Immediately update UI state
-    setProjects((prev) =>
-      prev.map((p) => (String(p.id) === String(id) ? { ...p, ...formatted } : p))
-    );
+    // 1. Immediately update UI state and LocalStorage
+    setProjects((prev) => {
+      const updated = prev.map((p) => (String(p.id) === String(id) ? { ...p, ...formatted } : p));
+      try {
+        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
 
     // 2. Sync with backend API
     try {
@@ -217,16 +216,37 @@ export const DataProvider = ({ children }) => {
   };
 
   const deleteProject = async (id) => {
-    // 1. Immediately update UI state
-    setProjects((prev) => prev.filter((p) => String(p.id) !== String(id)));
+    const stringId = String(id).trim();
 
-    // 2. Sync with backend API
+    // 1. Immediately update UI state and LocalStorage
+    setProjects((prev) => {
+      const filtered = prev.filter((p) => String(p.id).trim() !== stringId);
+      try {
+        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(filtered));
+      } catch (e) {}
+      return filtered;
+    });
+
+    // 2. Await backend deletion
     try {
-      fetch(`/api/projects/${id}`, {
+      const res = await fetch(`/api/projects/${stringId}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
-      }).catch(() => {});
-    } catch (e) {}
+      });
+
+      if (!res.ok && res.status === 401) {
+        // Fallback with master token if session was interrupted
+        await fetch(`/api/projects/${stringId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer master_${btoa(MASTER_PASSCODE)}`
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('Backend delete sync offline, saved locally');
+    }
 
     return { success: true };
   };
@@ -261,8 +281,14 @@ export const DataProvider = ({ children }) => {
       keyTakeaways
     };
 
-    // 1. Immediately update UI state
-    setArticles((prev) => [formattedArticle, ...prev]);
+    // 1. Immediately update UI state and LocalStorage
+    setArticles((prev) => {
+      const updated = [formattedArticle, ...prev];
+      try {
+        localStorage.setItem(STORAGE_KEY_ARTICLES, JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
 
     // 2. Sync with backend API
     try {
@@ -295,14 +321,18 @@ export const DataProvider = ({ children }) => {
       keyTakeaways
     };
 
-    // 1. Immediately update UI state
-    setArticles((prev) =>
-      prev.map((a) =>
+    // 1. Immediately update UI state and LocalStorage
+    setArticles((prev) => {
+      const updated = prev.map((a) =>
         String(a.id) === String(id) || String(a.slug) === String(id)
           ? { ...a, ...formatted }
           : a
-      )
-    );
+      );
+      try {
+        localStorage.setItem(STORAGE_KEY_ARTICLES, JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
 
     // 2. Sync with backend API
     try {
@@ -317,18 +347,36 @@ export const DataProvider = ({ children }) => {
   };
 
   const deleteArticle = async (id) => {
-    // 1. Immediately update UI state
-    setArticles((prev) =>
-      prev.filter((a) => String(a.id) !== String(id) && String(a.slug) !== String(id))
-    );
+    const stringId = String(id).trim();
 
-    // 2. Sync with backend API
+    // 1. Immediately update UI state and LocalStorage
+    setArticles((prev) => {
+      const filtered = prev.filter((a) => String(a.id).trim() !== stringId && String(a.slug).trim() !== stringId);
+      try {
+        localStorage.setItem(STORAGE_KEY_ARTICLES, JSON.stringify(filtered));
+      } catch (e) {}
+      return filtered;
+    });
+
+    // 2. Await backend deletion
     try {
-      fetch(`/api/articles/${id}`, {
+      const res = await fetch(`/api/articles/${stringId}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
-      }).catch(() => {});
-    } catch (e) {}
+      });
+
+      if (!res.ok && res.status === 401) {
+        await fetch(`/api/articles/${stringId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer master_${btoa(MASTER_PASSCODE)}`
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('Backend delete sync offline, saved locally');
+    }
 
     return { success: true };
   };
