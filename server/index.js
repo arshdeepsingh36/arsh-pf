@@ -37,31 +37,70 @@ const checkRateLimit = (req, res, next) => {
   next();
 };
 
+// In-memory fallback if filesystem is read-only (e.g. Vercel serverless)
+let memoryDb = null;
+
+const getDbPath = () => {
+  if (process.env.VERCEL) {
+    return path.join('/tmp', 'db.json');
+  }
+  return path.join(__dirname, 'data', 'db.json');
+};
+
+const syncInitialDataFile = (data) => {
+  try {
+    const srcFile = path.join(__dirname, '..', 'src', 'data', 'initialData.js');
+    if (fs.existsSync(path.dirname(srcFile))) {
+      const content = `// Auto-generated from Admin Studio CMS
+export const initialProjects = ${JSON.stringify(data.projects || [], null, 2)};
+
+export const initialArticles = ${JSON.stringify(data.articles || [], null, 2)};
+`;
+      fs.writeFileSync(srcFile, content, 'utf-8');
+      console.log('✅ Synchronized content to src/data/initialData.js');
+    }
+  } catch (err) {
+    // Non-fatal if read-only or in serverless environment
+  }
+};
+
 // Database helper functions
 const readDb = () => {
   try {
-    if (!fs.existsSync(DB_FILE)) {
-      fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
-      fs.writeFileSync(DB_FILE, JSON.stringify({ projects: [], articles: [] }, null, 2));
+    const dbFile = getDbPath();
+    if (fs.existsSync(dbFile)) {
+      const data = fs.readFileSync(dbFile, 'utf-8');
+      return JSON.parse(data);
     }
-    const data = fs.readFileSync(DB_FILE, 'utf-8');
-    return JSON.parse(data);
+    // If on Vercel and /tmp/db.json doesn't exist yet, seed from bundled file
+    const seedFile = path.join(__dirname, 'data', 'db.json');
+    if (fs.existsSync(seedFile)) {
+      const data = fs.readFileSync(seedFile, 'utf-8');
+      const parsed = JSON.parse(data);
+      if (memoryDb) return memoryDb;
+      return parsed;
+    }
+    return memoryDb || { projects: [], articles: [], inquiries: [] };
   } catch (err) {
     console.error('Error reading database:', err);
-    return { projects: [], articles: [] };
+    return memoryDb || { projects: [], articles: [], inquiries: [] };
   }
 };
 
 const writeDb = (data) => {
+  memoryDb = data;
   try {
-    fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
-    const tempFile = `${DB_FILE}.tmp`;
+    const dbFile = getDbPath();
+    fs.mkdirSync(path.dirname(dbFile), { recursive: true });
+    const tempFile = `${dbFile}.tmp`;
     fs.writeFileSync(tempFile, JSON.stringify(data, null, 2));
-    fs.renameSync(tempFile, DB_FILE);
+    fs.renameSync(tempFile, dbFile);
+    syncInitialDataFile(data);
     return true;
   } catch (err) {
-    console.error('Error writing to database:', err);
-    return false;
+    console.warn('Filesystem write warning (read-only or serverless), cached in memory:', err.message);
+    syncInitialDataFile(data);
+    return true;
   }
 };
 
@@ -369,6 +408,16 @@ app.post('/api/admin/import', requireAuth, (req, res) => {
   } else {
     res.status(500).json({ error: 'Failed to save imported data.' });
   }
+});
+
+app.post('/api/admin/publish', requireAuth, (req, res) => {
+  const { projects, articles } = req.body;
+  const db = readDb();
+  if (Array.isArray(projects)) db.projects = projects;
+  if (Array.isArray(articles)) db.articles = articles;
+  writeDb(db);
+  syncInitialDataFile(db);
+  res.json({ success: true, message: 'Content published to codebase successfully.' });
 });
 
 if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {

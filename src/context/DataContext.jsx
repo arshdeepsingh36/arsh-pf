@@ -5,6 +5,7 @@ const DataContext = createContext(null);
 
 const STORAGE_KEY_PROJECTS = 'portfolio_cms_projects_v2';
 const STORAGE_KEY_ARTICLES = 'portfolio_cms_articles_v2';
+const STORAGE_KEY_USER_MODIFIED = 'portfolio_cms_user_modified_v2';
 const TOKEN_KEY = 'cms_session_token_v2';
 const MASTER_PASSCODE = 'admin2026!';
 
@@ -59,10 +60,12 @@ export const DataProvider = ({ children }) => {
     } catch (e) {}
   }, [articles]);
 
-  // Sync with backend API server if available
+  // Sync with backend API server if available (without overwriting user's local edits)
   const refreshData = useCallback(async () => {
     try {
       setLoading(true);
+      const isUserModified = localStorage.getItem(STORAGE_KEY_USER_MODIFIED) === 'true';
+
       const [projRes, artRes] = await Promise.allSettled([
         fetch('/api/projects'),
         fetch('/api/articles')
@@ -71,14 +74,19 @@ export const DataProvider = ({ children }) => {
       if (projRes.status === 'fulfilled' && projRes.value.ok) {
         const projData = await projRes.value.json();
         if (Array.isArray(projData) && projData.length > 0) {
-          setProjects(projData);
+          // If the user has made changes locally, do not overwrite with stale server data!
+          if (!isUserModified) {
+            setProjects(projData);
+          }
         }
       }
 
       if (artRes.status === 'fulfilled' && artRes.value.ok) {
         const artData = await artRes.value.json();
         if (Array.isArray(artData) && artData.length > 0) {
-          setArticles(artData);
+          if (!isUserModified) {
+            setArticles(artData);
+          }
         }
       }
     } catch (err) {
@@ -165,6 +173,7 @@ export const DataProvider = ({ children }) => {
       const updated = [formattedProject, ...prev];
       try {
         localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
+        localStorage.setItem(STORAGE_KEY_USER_MODIFIED, 'true');
       } catch (e) {}
       return updated;
     });
@@ -199,6 +208,7 @@ export const DataProvider = ({ children }) => {
       const updated = prev.map((p) => (String(p.id) === String(id) ? { ...p, ...formatted } : p));
       try {
         localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
+        localStorage.setItem(STORAGE_KEY_USER_MODIFIED, 'true');
       } catch (e) {}
       return updated;
     });
@@ -223,6 +233,7 @@ export const DataProvider = ({ children }) => {
       const filtered = prev.filter((p) => String(p.id).trim() !== stringId);
       try {
         localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(filtered));
+        localStorage.setItem(STORAGE_KEY_USER_MODIFIED, 'true');
       } catch (e) {}
       return filtered;
     });
@@ -286,6 +297,7 @@ export const DataProvider = ({ children }) => {
       const updated = [formattedArticle, ...prev];
       try {
         localStorage.setItem(STORAGE_KEY_ARTICLES, JSON.stringify(updated));
+        localStorage.setItem(STORAGE_KEY_USER_MODIFIED, 'true');
       } catch (e) {}
       return updated;
     });
@@ -330,6 +342,7 @@ export const DataProvider = ({ children }) => {
       );
       try {
         localStorage.setItem(STORAGE_KEY_ARTICLES, JSON.stringify(updated));
+        localStorage.setItem(STORAGE_KEY_USER_MODIFIED, 'true');
       } catch (e) {}
       return updated;
     });
@@ -354,6 +367,7 @@ export const DataProvider = ({ children }) => {
       const filtered = prev.filter((a) => String(a.id).trim() !== stringId && String(a.slug).trim() !== stringId);
       try {
         localStorage.setItem(STORAGE_KEY_ARTICLES, JSON.stringify(filtered));
+        localStorage.setItem(STORAGE_KEY_USER_MODIFIED, 'true');
       } catch (e) {}
       return filtered;
     });
@@ -388,6 +402,7 @@ export const DataProvider = ({ children }) => {
     try {
       localStorage.removeItem(STORAGE_KEY_PROJECTS);
       localStorage.removeItem(STORAGE_KEY_ARTICLES);
+      localStorage.removeItem(STORAGE_KEY_USER_MODIFIED);
       fetch('/api/admin/import', {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -422,6 +437,7 @@ export const DataProvider = ({ children }) => {
         setArticles(jsonData.articles);
       }
       try {
+        localStorage.setItem(STORAGE_KEY_USER_MODIFIED, 'true');
         fetch('/api/admin/import', {
           method: 'POST',
           headers: getAuthHeaders(),
@@ -429,6 +445,23 @@ export const DataProvider = ({ children }) => {
         }).catch(() => {});
       } catch (e) {}
       return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  };
+
+  // Sync to local project files & trigger git readiness
+  const publishToCodebase = async () => {
+    try {
+      const res = await fetch('/api/admin/publish', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ projects, articles })
+      });
+      if (res.ok) {
+        return { success: true };
+      }
+      return { success: false, error: 'Server filesystem write failed' };
     } catch (e) {
       return { success: false, error: e.message };
     }
@@ -452,6 +485,7 @@ export const DataProvider = ({ children }) => {
         resetToDefaults,
         exportData,
         importData,
+        publishToCodebase,
         refreshData
       }}
     >

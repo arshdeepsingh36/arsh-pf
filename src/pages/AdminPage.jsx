@@ -80,7 +80,8 @@ const AdminPage = () => {
     deleteArticle, 
     resetToDefaults,
     exportData,
-    importData 
+    importData,
+    publishToCodebase
   } = useData();
 
   // Auth lock screen states
@@ -221,6 +222,7 @@ const AdminPage = () => {
       const res = await addProject(projectForm);
       if (res.success) showToast(`Project "${projectForm.title}" created successfully!`);
     }
+    try { publishToCodebase(); } catch (_) {}
     setProjectModalOpen(false);
   };
 
@@ -228,6 +230,7 @@ const AdminPage = () => {
     if (window.confirm(`Are you sure you want to delete "${title}"?`)) {
       await deleteProject(id);
       showToast(`Project deleted.`);
+      try { publishToCodebase(); } catch (_) {}
     }
   };
 
@@ -264,6 +267,7 @@ const AdminPage = () => {
       const res = await addArticle(articleForm);
       if (res.success) showToast(`Article "${articleForm.title}" published successfully!`);
     }
+    try { publishToCodebase(); } catch (_) {}
     setArticleModalOpen(false);
   };
 
@@ -271,6 +275,7 @@ const AdminPage = () => {
     if (window.confirm(`Are you sure you want to delete "${title}"?`)) {
       await deleteArticle(id);
       showToast(`Article deleted.`);
+      try { publishToCodebase(); } catch (_) {}
     }
   };
 
@@ -449,6 +454,22 @@ const AdminPage = () => {
               <span>New Article</span>
             </button>
           )}
+
+          <button
+            onClick={async () => {
+              const res = await publishToCodebase();
+              if (res.success) {
+                showToast('Synchronized to codebase files! Ready for git push.');
+              } else {
+                showToast('Saved in browser storage! (Full filesystem sync available in local dev)');
+              }
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-emerald-300 bg-emerald-50 text-emerald-800 rounded-full text-xs font-semibold hover:bg-emerald-100 transition-colors shadow-2xs cursor-pointer"
+            title="Synchronize all changes into codebase files (src/data/initialData.js & server/data/db.json)"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Save to Files</span>
+          </button>
 
           <Link
             to="/blog"
