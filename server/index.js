@@ -236,23 +236,48 @@ app.post('/api/contact', (req, res) => {
   }
 
   const newInquiry = {
-    id: 'inq_' + Date.now(),
+    id: req.body.id || 'inq_' + Date.now(),
     name,
     email,
     phone: phone || whatsapp || 'Not provided',
+    whatsapp: whatsapp || phone || 'Not provided',
     message,
+    subject: req.body.subject || `New Portfolio Inquiry from ${name}`,
+    source: req.body.source || 'Portfolio Contact Form',
+    status: req.body.status || 'new',
     createdAt: new Date().toISOString()
   };
 
   db.inquiries.unshift(newInquiry);
   writeDb(db);
 
-  return res.json({ success: true, message: 'Inquiry received successfully.' });
+  return res.json({ success: true, message: 'Inquiry received successfully.', inquiry: newInquiry });
 });
 
 app.get('/api/inquiries', requireAuth, (req, res) => {
   const db = readDb();
   return res.json(db.inquiries || []);
+});
+
+app.patch('/api/inquiries/:id/status', requireAuth, (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  const db = readDb();
+  const index = (db.inquiries || []).findIndex(i => String(i.id) === String(id));
+  if (index !== -1) {
+    db.inquiries[index].status = status || 'read';
+    writeDb(db);
+    return res.json({ success: true, inquiry: db.inquiries[index] });
+  }
+  return res.status(404).json({ error: 'Inquiry not found' });
+});
+
+app.delete('/api/inquiries/:id', requireAuth, (req, res) => {
+  const { id } = req.params;
+  const db = readDb();
+  db.inquiries = (db.inquiries || []).filter(i => String(i.id) !== String(id));
+  writeDb(db);
+  return res.json({ success: true, message: 'Inquiry deleted.' });
 });
 
 /* -------------------------------------------------------------

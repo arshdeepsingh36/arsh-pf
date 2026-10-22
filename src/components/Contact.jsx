@@ -41,10 +41,20 @@ const Contact = () => {
     // 1. Immediately store a persistent copy locally so inquiries are never lost
     try {
       const saved = JSON.parse(localStorage.getItem('arsh_portfolio_messages') || '[]');
-      saved.unshift({
-        ...formData,
-        submittedAt: new Date().toISOString()
-      });
+      const newInquiry = {
+        id: 'inq_' + Date.now(),
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.whatsapp.trim() || 'Not provided',
+        whatsapp: formData.whatsapp.trim() || 'Not provided',
+        message: formData.message.trim(),
+        subject: `New Portfolio Inquiry from ${formData.name.trim()}`,
+        source: 'Portfolio Contact Form',
+        status: 'new',
+        submittedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      };
+      saved.unshift(newInquiry);
       localStorage.setItem('arsh_portfolio_messages', JSON.stringify(saved));
     } catch (_) {}
 
@@ -54,10 +64,13 @@ const Contact = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.whatsapp || 'Not provided',
-          message: formData.message
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          phone: formData.whatsapp.trim() || 'Not provided',
+          whatsapp: formData.whatsapp.trim() || 'Not provided',
+          message: formData.message.trim(),
+          subject: `New Portfolio Inquiry from ${formData.name.trim()}`,
+          source: 'Portfolio Contact Form'
         })
       }).catch(() => {});
     } catch (_) {}

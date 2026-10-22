@@ -24,7 +24,17 @@ import {
   ShieldCheck,
   AlertCircle,
   Mail,
-  Phone
+  Phone,
+  MessageSquare,
+  Copy,
+  Check,
+  Calendar,
+  Clock,
+  User,
+  Send,
+  CheckCircle2,
+  Filter,
+  MessageCircle
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 
@@ -138,6 +148,10 @@ const AdminPage = () => {
     }
   });
 
+  const [selectedInquiry, setSelectedInquiry] = useState(null);
+  const [copiedId, setCopiedId] = useState('');
+  const [inquiryFilterStatus, setInquiryFilterStatus] = useState('all');
+
   useEffect(() => {
     const fetchInquiries = async () => {
       try {
@@ -150,12 +164,20 @@ const AdminPage = () => {
           if (Array.isArray(serverInquiries)) {
             const local = JSON.parse(localStorage.getItem('arsh_portfolio_messages') || '[]');
             const map = new Map();
-            serverInquiries.forEach(item => map.set(item.id || item.email + item.message, item));
+            serverInquiries.forEach(item => {
+              const key = item.id || (item.email + item.message);
+              map.set(key, item);
+            });
             local.forEach(item => {
-              const key = item.id || item.email + item.message;
+              const key = item.id || (item.email + item.message);
               if (!map.has(key)) map.set(key, item);
             });
-            setInquiries(Array.from(map.values()));
+            const merged = Array.from(map.values()).sort((a, b) => {
+              const timeA = new Date(a.createdAt || a.submittedAt || 0).getTime();
+              const timeB = new Date(b.createdAt || b.submittedAt || 0).getTime();
+              return timeB - timeA;
+            });
+            setInquiries(merged);
           }
         }
       } catch (_) {}
@@ -163,14 +185,185 @@ const AdminPage = () => {
     fetchInquiries();
   }, [activeTab]);
 
-  const handleDeleteInquiry = (id, email) => {
-    if (!window.confirm(`Delete inquiry from ${email}?`)) return;
+  const handleUpdateInquiryStatus = async (id, newStatus) => {
+    const updated = inquiries.map(item => {
+      const key = item.id || (item.email + item.message);
+      if (key === id || item.id === id) {
+        return { ...item, status: newStatus };
+      }
+      return item;
+    });
+    setInquiries(updated);
+    try {
+      localStorage.setItem('arsh_portfolio_messages', JSON.stringify(updated));
+    } catch (_) {}
+
+    if (selectedInquiry && (selectedInquiry.id === id || (selectedInquiry.email + selectedInquiry.message) === id)) {
+      setSelectedInquiry(prev => prev ? { ...prev, status: newStatus } : null);
+    }
+
+    try {
+      const token = sessionStorage.getItem('arsh_admin_token') || ('master_' + btoa('admin2026!'));
+      await fetch(`/api/inquiries/${id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+    } catch (_) {}
+
+    showToast(`Status updated to "${newStatus.replace('_', ' ')}"`);
+  };
+
+  const handleDeleteInquiry = async (id, email) => {
+    if (!window.confirm(`Delete inquiry from ${email || 'this client'}?`)) return;
     const updated = inquiries.filter(i => (i.id !== id && (i.email + i.message) !== id));
     setInquiries(updated);
     try {
       localStorage.setItem('arsh_portfolio_messages', JSON.stringify(updated));
     } catch (_) {}
+
+    if (selectedInquiry && (selectedInquiry.id === id || (selectedInquiry.email + selectedInquiry.message) === id)) {
+      setSelectedInquiry(null);
+    }
+
+    try {
+      const token = sessionStorage.getItem('arsh_admin_token') || ('master_' + btoa('admin2026!'));
+      await fetch(`/api/inquiries/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } catch (_) {}
+
     showToast('Inquiry removed.');
+  };
+
+  const copyToClipboard = (text, key) => {
+    if (!text) return;
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(text);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    setCopiedId(key);
+    setTimeout(() => {
+      setCopiedId(prev => prev === key ? '' : prev);
+    }, 2000);
+    showToast('Copied to clipboard!');
+  };
+
+  const copyInquirySummary = (inq) => {
+    const summary = `--- CLIENT INQUIRY DETAILS ---
+Name: ${inq.name || 'Anonymous'}
+Email: ${inq.email || 'N/A'}
+Phone / WhatsApp: ${inq.phone || inq.whatsapp || 'Not provided'}
+Date Received: ${inq.createdAt || inq.submittedAt ? new Date(inq.createdAt || inq.submittedAt).toLocaleString() : 'N/A'}
+Status: ${inq.status || 'new'}
+Subject: ${inq.subject || 'Portfolio Inquiry'}
+Source: ${inq.source || 'Portfolio Contact Form'}
+
+Message:
+${inq.message || '(Empty message)'}
+------------------------------`;
+    copyToClipboard(summary, `summary-${inq.id || inq.email}`);
+  };
+
+  const exportInquiriesCSV = () => {
+    if (inquiries.length === 0) {
+      alert('No inquiries to export.');
+      return;
+    }
+
+    const headers = ['ID', 'Date', 'Name', 'Email', 'Phone', 'Status', 'Subject', 'Source', 'Message'];
+    const rows = inquiries.map(inq => [
+      `"${(inq.id || '').replace(/"/g, '""')}"`,
+      `"${new Date(inq.createdAt || inq.submittedAt || Date.now()).toLocaleString().replace(/"/g, '""')}"`,
+      `"${(inq.name || '').replace(/"/g, '""')}"`,
+      `"${(inq.email || '').replace(/"/g, '""')}"`,
+      `"${((inq.phone || inq.whatsapp) || '').replace(/"/g, '""')}"`,
+      `"${(inq.status || 'new').replace(/"/g, '""')}"`,
+      `"${(inq.subject || '').replace(/"/g, '""')}"`,
+      `"${(inq.source || '').replace(/"/g, '""')}"`,
+      `"${(inq.message || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `portfolio_inquiries_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast(`Exported ${inquiries.length} inquiries to CSV.`);
+  };
+
+  const formatInquiryDate = (dateVal) => {
+    if (!dateVal) return 'Recently';
+    try {
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return 'Recently';
+      return d.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (_) {
+      return 'Recently';
+    }
+  };
+
+  const getRelativeTime = (dateVal) => {
+    if (!dateVal) return '';
+    try {
+      const d = new Date(dateVal);
+      const now = new Date();
+      const diffMs = now - d;
+      const diffSec = Math.floor(diffMs / 1000);
+      const diffMin = Math.floor(diffSec / 60);
+      const diffHour = Math.floor(diffMin / 60);
+      const diffDay = Math.floor(diffHour / 24);
+
+      if (diffSec < 60) return 'Just now';
+      if (diffMin < 60) return `${diffMin}m ago`;
+      if (diffHour < 24) return `${diffHour}h ago`;
+      if (diffDay === 1) return 'Yesterday';
+      if (diffDay < 30) return `${diffDay}d ago`;
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } catch (_) {
+      return '';
+    }
+  };
+
+  const getInquirerInitials = (name) => {
+    if (!name || typeof name !== 'string') return '?';
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'contacted':
+        return { label: 'Contacted', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' };
+      case 'in_review':
+        return { label: 'In Review', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', dot: 'bg-blue-500' };
+      case 'completed':
+        return { label: 'Completed', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-500' };
+      case 'new':
+      default:
+        return { label: 'New', bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' };
+    }
   };
 
   // Filtered lists
@@ -185,12 +378,23 @@ const AdminPage = () => {
     a.tag?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredInquiries = inquiries.filter(i => 
-    i.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    i.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    i.message?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (i.phone && i.phone.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredInquiries = inquiries.filter(i => {
+    const q = searchQuery.toLowerCase().trim();
+    const phoneVal = (i.phone || i.whatsapp || '').toLowerCase();
+    const matchesSearch = !q || (
+      (i.name && i.name.toLowerCase().includes(q)) ||
+      (i.email && i.email.toLowerCase().includes(q)) ||
+      (i.message && i.message.toLowerCase().includes(q)) ||
+      (i.subject && i.subject.toLowerCase().includes(q)) ||
+      phoneVal.includes(q)
+    );
+
+    if (!matchesSearch) return false;
+
+    if (inquiryFilterStatus === 'all') return true;
+    const currentStatus = (i.status || 'new').toLowerCase();
+    return currentStatus === inquiryFilterStatus;
+  });
 
   // Project Handlers
   const handleOpenAddProject = () => {
@@ -839,77 +1043,404 @@ const AdminPage = () => {
 
         {/* TAB 4: CLIENT INQUIRIES */}
         {activeTab === 'inquiries' && (
-          <section>
+          <section className="space-y-6">
+            {/* Top Metrics & Filter Bar */}
+            <div className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-xs">
+              {/* Stat Counters */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+                <div 
+                  onClick={() => setInquiryFilterStatus('all')}
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                    inquiryFilterStatus === 'all' 
+                      ? 'bg-gray-900 text-white border-gray-900 shadow-sm' 
+                      : 'bg-gray-50 border-gray-100 hover:bg-gray-100/70 text-gray-900'
+                  }`}
+                >
+                  <div className="text-2xl font-serif font-bold">{inquiries.length}</div>
+                  <div className={`text-xs font-medium mt-0.5 ${inquiryFilterStatus === 'all' ? 'text-gray-300' : 'text-gray-500'}`}>
+                    Total Inquiries
+                  </div>
+                </div>
+
+                <div 
+                  onClick={() => setInquiryFilterStatus('new')}
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                    inquiryFilterStatus === 'new' 
+                      ? 'bg-purple-700 text-white border-purple-700 shadow-sm' 
+                      : 'bg-purple-50/60 border-purple-100 hover:bg-purple-50 text-purple-900'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-serif font-bold">
+                      {inquiries.filter(i => (!i.status || i.status === 'new')).length}
+                    </span>
+                    {inquiries.some(i => (!i.status || i.status === 'new')) && (
+                      <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></span>
+                    )}
+                  </div>
+                  <div className={`text-xs font-medium mt-0.5 ${inquiryFilterStatus === 'new' ? 'text-purple-200' : 'text-purple-600'}`}>
+                    New / Unread
+                  </div>
+                </div>
+
+                <div 
+                  onClick={() => setInquiryFilterStatus('in_review')}
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                    inquiryFilterStatus === 'in_review' 
+                      ? 'bg-blue-700 text-white border-blue-700 shadow-sm' 
+                      : 'bg-blue-50/60 border-blue-100 hover:bg-blue-50 text-blue-900'
+                  }`}
+                >
+                  <div className="text-2xl font-serif font-bold">
+                    {inquiries.filter(i => i.status === 'in_review').length}
+                  </div>
+                  <div className={`text-xs font-medium mt-0.5 ${inquiryFilterStatus === 'in_review' ? 'text-blue-200' : 'text-blue-600'}`}>
+                    In Review
+                  </div>
+                </div>
+
+                <div 
+                  onClick={() => setInquiryFilterStatus('contacted')}
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                    inquiryFilterStatus === 'contacted' 
+                      ? 'bg-amber-600 text-white border-amber-600 shadow-sm' 
+                      : 'bg-amber-50/60 border-amber-100 hover:bg-amber-50 text-amber-900'
+                  }`}
+                >
+                  <div className="text-2xl font-serif font-bold">
+                    {inquiries.filter(i => i.status === 'contacted').length}
+                  </div>
+                  <div className={`text-xs font-medium mt-0.5 ${inquiryFilterStatus === 'contacted' ? 'text-amber-200' : 'text-amber-700'}`}>
+                    Contacted
+                  </div>
+                </div>
+
+                <div 
+                  onClick={() => setInquiryFilterStatus('completed')}
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer col-span-2 sm:col-span-1 ${
+                    inquiryFilterStatus === 'completed' 
+                      ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm' 
+                      : 'bg-emerald-50/60 border-emerald-100 hover:bg-emerald-50 text-emerald-900'
+                  }`}
+                >
+                  <div className="text-2xl font-serif font-bold">
+                    {inquiries.filter(i => i.status === 'completed').length}
+                  </div>
+                  <div className={`text-xs font-medium mt-0.5 ${inquiryFilterStatus === 'completed' ? 'text-emerald-200' : 'text-emerald-700'}`}>
+                    Completed
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Filter Pills & Export Button */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-gray-100">
+                <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                  <span className="text-gray-400 font-medium mr-1 flex items-center gap-1">
+                    <Filter className="w-3.5 h-3.5" />
+                    <span>Filter:</span>
+                  </span>
+
+                  {[
+                    { id: 'all', label: 'All', count: inquiries.length },
+                    { id: 'new', label: 'New', count: inquiries.filter(i => (!i.status || i.status === 'new')).length },
+                    { id: 'in_review', label: 'In Review', count: inquiries.filter(i => i.status === 'in_review').length },
+                    { id: 'contacted', label: 'Contacted', count: inquiries.filter(i => i.status === 'contacted').length },
+                    { id: 'completed', label: 'Completed', count: inquiries.filter(i => i.status === 'completed').length }
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setInquiryFilterStatus(tab.id)}
+                      className={`px-3 py-1.5 rounded-full font-medium transition-all ${
+                        inquiryFilterStatus === tab.id
+                          ? 'bg-[#111827] text-white shadow-2xs'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200/80 hover:text-gray-900'
+                      }`}
+                    >
+                      {tab.label} ({tab.count})
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={exportInquiriesCSV}
+                    className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-gray-50 text-xs font-semibold text-gray-700 transition-colors shadow-2xs cursor-pointer"
+                    title="Export all inquiries to CSV file"
+                  >
+                    <Download className="w-3.5 h-3.5 text-[#7a5eb4]" />
+                    <span>Export CSV</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Inquiries Content List */}
             {filteredInquiries.length === 0 ? (
               <div className="bg-white rounded-3xl p-12 text-center border border-dashed border-gray-300">
                 <Mail className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-xl font-serif font-bold text-gray-700 mb-2">No inquiries yet</h3>
-                <p className="text-gray-500 text-sm max-w-sm mx-auto">
-                  {searchQuery ? 'No inquiries matching your search criteria.' : 'When potential clients submit the contact form on your portfolio, inquiries will appear here.'}
+                <h3 className="text-xl font-serif font-bold text-gray-700 mb-2">No inquiries found</h3>
+                <p className="text-gray-500 text-sm max-w-md mx-auto">
+                  {searchQuery || inquiryFilterStatus !== 'all'
+                    ? 'No inquiries match your current search query or filter status.'
+                    : 'When prospective clients submit your contact form, their full details and message will show up here.'}
                 </p>
+                {(searchQuery || inquiryFilterStatus !== 'all') && (
+                  <button
+                    onClick={() => { setSearchQuery(''); setInquiryFilterStatus('all'); }}
+                    className="mt-4 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-full transition-colors"
+                  >
+                    Clear Filters
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredInquiries.map((inq, idx) => (
-                  <div 
-                    key={inq.id || idx} 
-                    className="bg-white rounded-2xl border border-gray-200/90 p-6 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow"
-                  >
-                    <div>
-                      <div className="flex items-start justify-between gap-4 mb-4">
-                        <div>
-                          <h3 className="font-serif text-xl font-bold text-gray-900">{inq.name}</h3>
-                          <div className="text-xs text-gray-400 mt-1">
-                            {inq.createdAt || inq.submittedAt ? new Date(inq.createdAt || inq.submittedAt).toLocaleString() : 'Recent'}
+                {filteredInquiries.map((inq, idx) => {
+                  const inquiryId = inq.id || (inq.email + (inq.createdAt || inq.submittedAt || idx));
+                  const statusInfo = getStatusBadge(inq.status || 'new');
+                  const phoneVal = inq.phone || inq.whatsapp || '';
+                  const hasPhone = phoneVal && phoneVal !== 'Not provided';
+                  const wordCount = (inq.message || '').trim().split(/\s+/).filter(Boolean).length;
+                  const charCount = (inq.message || '').length;
+                  const relativeTime = getRelativeTime(inq.createdAt || inq.submittedAt);
+                  const formattedDate = formatInquiryDate(inq.createdAt || inq.submittedAt);
+
+                  return (
+                    <motion.div 
+                      key={inquiryId}
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="bg-white rounded-3xl border border-gray-200/90 p-6 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow group"
+                    >
+                      <div>
+                        {/* Card Header: Avatar, Name, Relative Time, Status Dropdown & Delete */}
+                        <div className="flex items-start justify-between gap-3 mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#7a5eb4] to-[#4c2d82] text-white font-bold flex items-center justify-center text-base shadow-xs shrink-0">
+                              {getInquirerInitials(inq.name)}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-serif text-xl font-bold text-gray-900 leading-tight">
+                                  {inq.name || 'Anonymous Client'}
+                                </h3>
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                                <span className="inline-flex items-center gap-1">
+                                  <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                                  <span>{formattedDate}</span>
+                                </span>
+                                {relativeTime && (
+                                  <>
+                                    <span className="text-gray-300">•</span>
+                                    <span className="inline-flex items-center gap-1 font-medium text-purple-700">
+                                      <Clock className="w-3 h-3" />
+                                      <span>{relativeTime}</span>
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Status Picker & Actions */}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {/* Inline Status Selector */}
+                            <select
+                              value={inq.status || 'new'}
+                              onChange={(e) => handleUpdateInquiryStatus(inquiryId, e.target.value)}
+                              className={`text-xs font-semibold px-2.5 py-1.5 rounded-full border cursor-pointer focus:outline-none transition-colors ${statusInfo.bg} ${statusInfo.text} ${statusInfo.border}`}
+                              title="Update status"
+                            >
+                              <option value="new">● New</option>
+                              <option value="in_review">● In Review</option>
+                              <option value="contacted">● Contacted</option>
+                              <option value="completed">● Completed</option>
+                            </select>
+
+                            <button
+                              onClick={() => handleDeleteInquiry(inquiryId, inq.email)}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                              title="Delete inquiry"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
+
+                        {/* Contact Channels Row */}
+                        <div className="space-y-2 mb-4">
+                          {/* Email badge with copy & mailto */}
+                          <div className="flex items-center justify-between gap-2 p-2.5 bg-blue-50/70 border border-blue-100 rounded-xl text-xs text-blue-900 font-sans">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Mail className="w-4 h-4 text-blue-600 shrink-0" />
+                              <a 
+                                href={`mailto:${inq.email}`}
+                                className="truncate hover:underline font-medium text-blue-800"
+                                title="Click to send email"
+                              >
+                                {inq.email}
+                              </a>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                onClick={() => copyToClipboard(inq.email, `email-${inquiryId}`)}
+                                className="p-1 text-blue-600 hover:bg-blue-100/70 rounded-md transition-colors cursor-pointer"
+                                title="Copy Email"
+                              >
+                                {copiedId === `email-${inquiryId}` ? (
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
+                                    <Check className="w-3.5 h-3.5" /> Copied
+                                  </span>
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                              <a
+                                href={`mailto:${inq.email}`}
+                                className="p-1 text-blue-600 hover:bg-blue-100/70 rounded-md transition-colors"
+                                title="Open Email Client"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            </div>
+                          </div>
+
+                          {/* Phone / WhatsApp badge with copy & direct chat */}
+                          {hasPhone ? (
+                            <div className="flex items-center justify-between gap-2 p-2.5 bg-emerald-50/70 border border-emerald-100 rounded-xl text-xs text-emerald-900 font-sans">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Phone className="w-4 h-4 text-emerald-600 shrink-0" />
+                                <span className="font-medium text-emerald-800 truncate">
+                                  {phoneVal}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  onClick={() => copyToClipboard(phoneVal, `phone-${inquiryId}`)}
+                                  className="p-1 text-emerald-600 hover:bg-emerald-100/70 rounded-md transition-colors cursor-pointer"
+                                  title="Copy Phone Number"
+                                >
+                                  {copiedId === `phone-${inquiryId}` ? (
+                                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
+                                      <Check className="w-3.5 h-3.5" /> Copied
+                                    </span>
+                                  ) : (
+                                    <Copy className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                                <a
+                                  href={`https://wa.me/${phoneVal.replace(/[^0-9]/g, '')}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-600 text-white rounded-md text-[11px] font-semibold hover:bg-emerald-700 transition-colors"
+                                  title="Open WhatsApp Chat"
+                                >
+                                  <MessageCircle className="w-3 h-3" />
+                                  <span>WhatsApp</span>
+                                </a>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-xl text-[11px] text-gray-400 italic">
+                              Phone / WhatsApp: Not provided
+                            </div>
+                          )}
+
+                          {/* Subject & Source Metadata */}
+                          <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-500 pt-1">
+                            {inq.subject && (
+                              <span className="px-2.5 py-1 bg-gray-100 rounded-md font-medium text-gray-700">
+                                Subject: {inq.subject}
+                              </span>
+                            )}
+                            <span className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-md font-medium">
+                              Channel: {inq.source || 'Portfolio Contact Form'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Full Message Box */}
+                        <div className="bg-gray-50/90 rounded-2xl p-4 border border-gray-200/70 relative">
+                          <div className="flex items-center justify-between text-[11px] text-gray-400 font-medium mb-2 pb-1.5 border-b border-gray-200/50">
+                            <span>Client Message</span>
+                            <span>{wordCount} words • {charCount} chars</span>
+                          </div>
+
+                          <p className="text-sm text-gray-800 font-sans whitespace-pre-wrap leading-relaxed">
+                            {inq.message || '(No message content)'}
+                          </p>
+
+                          <div className="mt-3 pt-2 border-t border-gray-200/50 flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => copyToClipboard(inq.message, `msg-${inquiryId}`)}
+                              className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-gray-800 font-medium cursor-pointer"
+                              title="Copy Message Text"
+                            >
+                              {copiedId === `msg-${inquiryId}` ? (
+                                <span className="inline-flex items-center gap-1 text-emerald-600">
+                                  <Check className="w-3 h-3" /> Copied message
+                                </span>
+                              ) : (
+                                <>
+                                  <Copy className="w-3 h-3" />
+                                  <span>Copy Message</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Card Footer Actions */}
+                      <div className="mt-5 pt-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
                         <button
-                          onClick={() => handleDeleteInquiry(inq.id || inq.email + inq.message, inq.email)}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                          title="Delete Inquiry"
+                          onClick={() => setSelectedInquiry(inq)}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-semibold transition-colors cursor-pointer"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Eye className="w-3.5 h-3.5 text-[#7a5eb4]" />
+                          <span>View Full Details</span>
                         </button>
-                      </div>
 
-                      <div className="flex flex-wrap gap-2 mb-4 text-xs font-sans">
-                        <a 
-                          href={`mailto:${inq.email}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-full font-medium transition-colors"
-                        >
-                          <Mail className="w-3.5 h-3.5" />
-                          <span>{inq.email}</span>
-                        </a>
-                        {inq.phone && inq.phone !== 'Not provided' && (
-                          <a 
-                            href={`https://wa.me/${inq.phone.replace(/[^0-9]/g, '')}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-full font-medium transition-colors"
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => copyInquirySummary(inq)}
+                            className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+                            title="Copy full inquiry summary"
                           >
-                            <Phone className="w-3.5 h-3.5" />
-                            <span>{inq.phone}</span>
+                            {copiedId === `summary-${inquiryId}` ? (
+                              <Check className="w-4 h-4 text-emerald-600" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </button>
+
+                          {hasPhone && (
+                            <a
+                              href={`https://wa.me/${phoneVal.replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(inq.name || '')},%20thank%20you%20for%20reaching%20out%20via%20my%20portfolio!`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-xs font-semibold transition-colors shadow-2xs"
+                            >
+                              <MessageCircle className="w-3.5 h-3.5" />
+                              <span>WhatsApp</span>
+                            </a>
+                          )}
+
+                          <a
+                            href={`mailto:${inq.email}?subject=Re: ${encodeURIComponent(inq.subject || 'Portfolio Inquiry')}&body=Hi ${encodeURIComponent(inq.name || '')},%0D%0A%0D%0AThank you for reaching out via my portfolio!%0D%0A%0D%0ABest regards,%0D%0AArshdeep Singh`}
+                            className="inline-flex items-center gap-1 px-4 py-2 bg-[#111827] text-white rounded-full text-xs font-semibold hover:bg-black transition-colors shadow-2xs"
+                          >
+                            <span>Reply via Email</span>
+                            <Send className="w-3 h-3" />
                           </a>
-                        )}
+                        </div>
                       </div>
-
-                      <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                        <p className="text-sm text-gray-700 font-sans whitespace-pre-wrap leading-relaxed">
-                          {inq.message}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-end gap-3">
-                      <a
-                        href={`mailto:${inq.email}?subject=Re: Portfolio Inquiry&body=Hi ${encodeURIComponent(inq.name)},%0D%0A%0D%0AThank you for reaching out!`}
-                        className="px-4 py-2 bg-[#111827] text-white rounded-full text-xs font-semibold hover:bg-black transition-colors"
-                      >
-                        Reply via Email &rarr;
-                      </a>
-                    </div>
-                  </div>
-                ))}
+                    </motion.div>
+                  );
+                })}
               </div>
             )}
           </section>
@@ -1393,6 +1924,270 @@ const AdminPage = () => {
             </motion.div>
           </div>
         )}
+      </AnimatePresence>
+
+      {/* MODAL: INQUIRY FULL DETAILS */}
+      <AnimatePresence>
+        {selectedInquiry && (() => {
+          const inq = selectedInquiry;
+          const inquiryId = inq.id || (inq.email + (inq.createdAt || inq.submittedAt || ''));
+          const statusInfo = getStatusBadge(inq.status || 'new');
+          const phoneVal = inq.phone || inq.whatsapp || '';
+          const hasPhone = phoneVal && phoneVal !== 'Not provided';
+          const wordCount = (inq.message || '').trim().split(/\s+/).filter(Boolean).length;
+          const charCount = (inq.message || '').length;
+          const formattedDate = formatInquiryDate(inq.createdAt || inq.submittedAt);
+          const relativeTime = getRelativeTime(inq.createdAt || inq.submittedAt);
+
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-xs">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-gray-200"
+              >
+                {/* Modal Header */}
+                <div className="px-8 py-5 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur-md z-10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#7a5eb4] to-[#4c2d82] text-white font-bold flex items-center justify-center text-lg shadow-xs">
+                      {getInquirerInitials(inq.name)}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="font-serif text-2xl font-bold text-gray-900 leading-tight">
+                          {inq.name || 'Anonymous Client'}
+                        </h2>
+                        <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${statusInfo.bg} ${statusInfo.text} ${statusInfo.border}`}>
+                          {statusInfo.label}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Received on {formattedDate} {relativeTime ? `(${relativeTime})` : ''}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setSelectedInquiry(null)}
+                    className="p-2 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
+                    title="Close"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-8 overflow-y-auto space-y-6 flex-1 font-sans">
+                  {/* Status Management Bar */}
+                  <div className="bg-gray-50/80 p-4 rounded-2xl border border-gray-200/70">
+                    <div className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-[#7a5eb4]" />
+                      <span>Update Inquiry Status</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { id: 'new', label: 'New / Unread', color: 'bg-purple-600' },
+                        { id: 'in_review', label: 'In Review', color: 'bg-blue-600' },
+                        { id: 'contacted', label: 'Contacted', color: 'bg-amber-600' },
+                        { id: 'completed', label: 'Completed', color: 'bg-emerald-600' }
+                      ].map(st => {
+                        const isCurrent = (inq.status || 'new') === st.id;
+                        return (
+                          <button
+                            key={st.id}
+                            onClick={() => handleUpdateInquiryStatus(inquiryId, st.id)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                              isCurrent
+                                ? `${st.color} text-white shadow-xs`
+                                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-100'
+                            }`}
+                          >
+                            {isCurrent && <Check className="w-3 h-3 inline mr-1" />}
+                            {st.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Contact & Meta Details Grid */}
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
+                      Client & Message Metadata
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {/* Email */}
+                      <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-between">
+                        <div className="min-w-0 pr-2">
+                          <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide block">Email Address</span>
+                          <span className="text-sm font-semibold text-gray-900 truncate block">{inq.email}</span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => copyToClipboard(inq.email, `modal-email-${inquiryId}`)}
+                            className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-200/70 rounded-lg transition-colors cursor-pointer"
+                            title="Copy email"
+                          >
+                            {copiedId === `modal-email-${inquiryId}` ? (
+                              <Check className="w-4 h-4 text-emerald-600" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </button>
+                          <a
+                            href={`mailto:${inq.email}`}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Open in email client"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* Phone */}
+                      <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-between">
+                        <div className="min-w-0 pr-2">
+                          <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide block">Phone / WhatsApp</span>
+                          <span className="text-sm font-semibold text-gray-900 truncate block">
+                            {hasPhone ? phoneVal : 'Not provided'}
+                          </span>
+                        </div>
+                        {hasPhone && (
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={() => copyToClipboard(phoneVal, `modal-phone-${inquiryId}`)}
+                              className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-200/70 rounded-lg transition-colors cursor-pointer"
+                              title="Copy phone"
+                            >
+                              {copiedId === `modal-phone-${inquiryId}` ? (
+                                <Check className="w-4 h-4 text-emerald-600" />
+                              ) : (
+                                <Copy className="w-4 h-4" />
+                              )}
+                            </button>
+                            <a
+                              href={`https://wa.me/${phoneVal.replace(/[^0-9]/g, '')}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                              title="Chat on WhatsApp"
+                            >
+                              <MessageCircle className="w-4 h-4" />
+                            </a>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Date & Time */}
+                      <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-100">
+                        <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide block">Submitted At</span>
+                        <span className="text-sm font-semibold text-gray-900 block">{formattedDate}</span>
+                        {inq.createdAt && (
+                          <span className="text-[10px] text-gray-400 font-mono block mt-0.5 truncate">{inq.createdAt}</span>
+                        )}
+                      </div>
+
+                      {/* Channel Source & ID */}
+                      <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-100">
+                        <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide block">Source Channel & ID</span>
+                        <span className="text-sm font-semibold text-gray-900 block">{inq.source || 'Portfolio Contact Form'}</span>
+                        <span className="text-[10px] text-gray-400 font-mono block mt-0.5">ID: {inquiryId}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Subject Line (if present) */}
+                  {inq.subject && (
+                    <div className="p-3.5 bg-purple-50/70 border border-purple-100 rounded-2xl">
+                      <span className="text-[11px] font-semibold text-purple-700 uppercase tracking-wide block mb-0.5">Subject</span>
+                      <span className="text-sm font-bold text-gray-900 block">{inq.subject}</span>
+                    </div>
+                  )}
+
+                  {/* Full Message Box */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                        Full Inquiry Message
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400">{wordCount} words • {charCount} characters</span>
+                        <button
+                          onClick={() => copyToClipboard(inq.message, `modal-msg-${inquiryId}`)}
+                          className="inline-flex items-center gap-1 text-xs text-purple-700 hover:text-purple-900 font-semibold cursor-pointer"
+                        >
+                          {copiedId === `modal-msg-${inquiryId}` ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              <span className="text-emerald-600">Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span>Copy Text</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="p-5 bg-gray-50 rounded-2xl border border-gray-200/80 font-sans text-sm text-gray-800 whitespace-pre-wrap leading-relaxed select-text">
+                      {inq.message || '(Empty message)'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Footer Actions */}
+                <div className="px-8 py-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 bg-white sticky bottom-0">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleDeleteInquiry(inquiryId, inq.email)}
+                      className="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-full text-xs font-semibold transition-colors cursor-pointer"
+                    >
+                      Delete Inquiry
+                    </button>
+                    <button
+                      onClick={() => copyInquirySummary(inq)}
+                      className="px-4 py-2 border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-full text-xs font-semibold transition-colors cursor-pointer inline-flex items-center gap-1"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>{copiedId === `summary-${inquiryId}` ? 'Copied Summary!' : 'Copy Summary'}</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {hasPhone && (
+                      <a
+                        href={`https://wa.me/${phoneVal.replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(inq.name || '')},%20thank%20you%20for%20reaching%20out%20via%20my%20portfolio!`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-xs font-semibold transition-colors shadow-2xs"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        <span>Chat on WhatsApp</span>
+                      </a>
+                    )}
+
+                    <a
+                      href={`mailto:${inq.email}?subject=Re: ${encodeURIComponent(inq.subject || 'Portfolio Inquiry')}&body=Hi ${encodeURIComponent(inq.name || '')},%0D%0A%0D%0AThank you for reaching out via my portfolio!%0D%0A%0D%0ABest regards,%0D%0AArshdeep Singh`}
+                      className="inline-flex items-center gap-1.5 px-5 py-2 bg-[#111827] text-white rounded-full text-xs font-semibold hover:bg-black transition-colors shadow-2xs"
+                    >
+                      <span>Reply via Email</span>
+                      <Send className="w-3.5 h-3.5" />
+                    </a>
+
+                    <button
+                      onClick={() => setSelectedInquiry(null)}
+                      className="px-5 py-2 rounded-full border border-gray-200 text-gray-700 text-xs font-semibold hover:bg-gray-50 transition-colors"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          );
+        })()}
       </AnimatePresence>
 
       {/* Admin Footer */}
