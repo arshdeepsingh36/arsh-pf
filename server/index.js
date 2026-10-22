@@ -183,6 +183,40 @@ app.get('/api/articles', (req, res) => {
 });
 
 /* -------------------------------------------------------------
+   CONTACT / INQUIRIES ENDPOINTS
+------------------------------------------------------------- */
+app.post('/api/contact', (req, res) => {
+  const { name, email, phone, whatsapp, message } = req.body;
+  if (!name || !email || !message) {
+    return res.status(400).json({ error: 'Name, email, and message are required.' });
+  }
+
+  const db = readDb();
+  if (!Array.isArray(db.inquiries)) {
+    db.inquiries = [];
+  }
+
+  const newInquiry = {
+    id: 'inq_' + Date.now(),
+    name,
+    email,
+    phone: phone || whatsapp || 'Not provided',
+    message,
+    createdAt: new Date().toISOString()
+  };
+
+  db.inquiries.unshift(newInquiry);
+  writeDb(db);
+
+  return res.json({ success: true, message: 'Inquiry received successfully.' });
+});
+
+app.get('/api/inquiries', requireAuth, (req, res) => {
+  const db = readDb();
+  return res.json(db.inquiries || []);
+});
+
+/* -------------------------------------------------------------
    PROTECTED CRUD ENDPOINTS (PROJECTS)
 ------------------------------------------------------------- */
 app.post('/api/projects', requireAuth, (req, res) => {

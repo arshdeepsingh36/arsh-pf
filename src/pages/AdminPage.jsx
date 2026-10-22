@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -22,7 +22,9 @@ import {
   KeyRound,
   LogOut,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  Mail,
+  Phone
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 
@@ -126,6 +128,50 @@ const AdminPage = () => {
     }
   };
 
+  // Inquiries state
+  const [inquiries, setInquiries] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('arsh_portfolio_messages') || '[]');
+    } catch (_) {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    const fetchInquiries = async () => {
+      try {
+        const token = sessionStorage.getItem('arsh_admin_token') || ('master_' + btoa('admin2026!'));
+        const res = await fetch('/api/inquiries', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const serverInquiries = await res.json();
+          if (Array.isArray(serverInquiries)) {
+            const local = JSON.parse(localStorage.getItem('arsh_portfolio_messages') || '[]');
+            const map = new Map();
+            serverInquiries.forEach(item => map.set(item.id || item.email + item.message, item));
+            local.forEach(item => {
+              const key = item.id || item.email + item.message;
+              if (!map.has(key)) map.set(key, item);
+            });
+            setInquiries(Array.from(map.values()));
+          }
+        }
+      } catch (_) {}
+    };
+    fetchInquiries();
+  }, [activeTab]);
+
+  const handleDeleteInquiry = (id, email) => {
+    if (!window.confirm(`Delete inquiry from ${email}?`)) return;
+    const updated = inquiries.filter(i => (i.id !== id && (i.email + i.message) !== id));
+    setInquiries(updated);
+    try {
+      localStorage.setItem('arsh_portfolio_messages', JSON.stringify(updated));
+    } catch (_) {}
+    showToast('Inquiry removed.');
+  };
+
   // Filtered lists
   const filteredProjects = projects.filter(p => 
     p.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -136,6 +182,13 @@ const AdminPage = () => {
   const filteredArticles = articles.filter(a => 
     a.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     a.tag?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredInquiries = inquiries.filter(i => 
+    i.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    i.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    i.message?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (i.phone && i.phone.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   // Project Handlers
@@ -450,6 +503,18 @@ const AdminPage = () => {
             </button>
 
             <button
+              onClick={() => { setActiveTab('inquiries'); setSearchQuery(''); }}
+              className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                activeTab === 'inquiries'
+                  ? 'bg-[#111827] text-white shadow-xs'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <Mail className="w-4 h-4" />
+              <span>Inquiries ({inquiries.length})</span>
+            </button>
+
+            <button
               onClick={() => { setActiveTab('settings'); setSearchQuery(''); }}
               className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-medium transition-all ${
                 activeTab === 'settings'
@@ -748,6 +813,84 @@ const AdminPage = () => {
                 </button>
               </div>
             </div>
+          </section>
+        )}
+
+        {/* TAB 4: CLIENT INQUIRIES */}
+        {activeTab === 'inquiries' && (
+          <section>
+            {filteredInquiries.length === 0 ? (
+              <div className="bg-white rounded-3xl p-12 text-center border border-dashed border-gray-300">
+                <Mail className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-xl font-serif font-bold text-gray-700 mb-2">No inquiries yet</h3>
+                <p className="text-gray-500 text-sm max-w-sm mx-auto">
+                  {searchQuery ? 'No inquiries matching your search criteria.' : 'When potential clients submit the contact form on your portfolio, inquiries will appear here.'}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {filteredInquiries.map((inq, idx) => (
+                  <div 
+                    key={inq.id || idx} 
+                    className="bg-white rounded-2xl border border-gray-200/90 p-6 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-4 mb-4">
+                        <div>
+                          <h3 className="font-serif text-xl font-bold text-gray-900">{inq.name}</h3>
+                          <div className="text-xs text-gray-400 mt-1">
+                            {inq.createdAt || inq.submittedAt ? new Date(inq.createdAt || inq.submittedAt).toLocaleString() : 'Recent'}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteInquiry(inq.id || inq.email + inq.message, inq.email)}
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                          title="Delete Inquiry"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 mb-4 text-xs font-sans">
+                        <a 
+                          href={`mailto:${inq.email}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-full font-medium transition-colors"
+                        >
+                          <Mail className="w-3.5 h-3.5" />
+                          <span>{inq.email}</span>
+                        </a>
+                        {inq.phone && inq.phone !== 'Not provided' && (
+                          <a 
+                            href={`https://wa.me/${inq.phone.replace(/[^0-9]/g, '')}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-full font-medium transition-colors"
+                          >
+                            <Phone className="w-3.5 h-3.5" />
+                            <span>{inq.phone}</span>
+                          </a>
+                        )}
+                      </div>
+
+                      <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                        <p className="text-sm text-gray-700 font-sans whitespace-pre-wrap leading-relaxed">
+                          {inq.message}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-end gap-3">
+                      <a
+                        href={`mailto:${inq.email}?subject=Re: Portfolio Inquiry&body=Hi ${encodeURIComponent(inq.name)},%0D%0A%0D%0AThank you for reaching out!`}
+                        className="px-4 py-2 bg-[#111827] text-white rounded-full text-xs font-semibold hover:bg-black transition-colors"
+                      >
+                        Reply via Email &rarr;
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         )}
 
